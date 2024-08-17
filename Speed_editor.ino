@@ -20,9 +20,11 @@
 #define RED_LED 18
 #define BLUE_LED 19
 
-bool bUseControlWithWheel = true;
+volatile bool bUseControlWithWheel = true;
 
 volatile unsigned long encoderTime = 0;
+
+volatile bool bSleep = false;
 
 EncoderButton encoderBTN(2, 3);
 
@@ -42,6 +44,7 @@ volatile bool controlPressed = false;
 volatile bool altPressed = false;
 volatile bool bMovingFast = false;
 volatile bool bSpecialLED = false;
+volatile bool bSpecialButton = false;
 
 void blinkPurple()
 {
@@ -112,8 +115,7 @@ void keyPress(uint8_t c, bool bAlt=false, bool bControl=false, bool bShift=false
 	Keyboard.press(c);	// Keydown
   delay(100);
 	Keyboard.release(c);		// Keyup
-	
-       
+	    
   
   if (bAlt)
     Keyboard.release(KEY_LEFT_ALT);
@@ -124,23 +126,67 @@ void keyPress(uint8_t c, bool bAlt=false, bool bControl=false, bool bShift=false
   if (bShift)
     Keyboard.release(KEY_LEFT_SHIFT);
 
-  if (altPressed==false && controlPressed==false)
+  if (altPressed==false && controlPressed==false && bSpecialButton == false)
     digitalWrite(RED_LED,LOW);
 
   if (bSpecialLED)
   {
-    digitalWrite(BLUE_LED,HIGH);
     bSpecialLED = false;
   }
 
+  digitalWrite(BLUE_LED,HIGH);
    
+}
+
+void keyPress_sleep(uint8_t c, bool bAlt=false, bool bControl=false, bool bShift=false)
+{
+  //Serial.println("key");
+  if (bAlt)
+    Keyboard.press(KEY_LEFT_ALT);
+
+  if (bControl)
+    Keyboard.press(KEY_LEFT_CTRL);
+
+  if (bShift)
+    Keyboard.press(KEY_LEFT_SHIFT);
+
+  digitalWrite(RED_LED,HIGH);
+	Keyboard.press(c);	// Keydown
+  delay(20);
+	Keyboard.release(c);		// Keyup
+	    
+  
+  if (bAlt)
+    Keyboard.release(KEY_LEFT_ALT);
+
+  if (bControl)
+    Keyboard.release(KEY_LEFT_CTRL);
+
+  if (bShift)
+    Keyboard.release(KEY_LEFT_SHIFT);
+
+  digitalWrite(RED_LED,LOW);
+
 }
 
 // alt
 void on_ALT_pressed(EncoderButton& eb) 
 {
-  
+  if (bSleep)
+  {
+    // paste in sleep mode
+    keyPress_sleep('v',false,true);
+    return;
+  }
+
   digitalWrite(RED_LED,HIGH);
+
+  if (bSpecialButton)
+  {
+    keyPress(KEY_DOWN_ARROW);
+    return;
+  }
+
   altPressed =  true;
   Keyboard.press(KEY_LEFT_ALT);
 
@@ -148,16 +194,37 @@ void on_ALT_pressed(EncoderButton& eb)
 
 void on_ALT_released(EncoderButton& eb) {
   
-    altPressed = false;
-    Keyboard.release(KEY_LEFT_ALT);
-    digitalWrite(RED_LED,LOW);
+  if (bSleep) return;
+
+  altPressed = false;
+  Keyboard.release(KEY_LEFT_ALT);
+  digitalWrite(RED_LED,LOW);
+}
+
+void on_ALT_triple(EncoderButton& eb) 
+{
+  
+ 
 }
 
 // CTRL
 void on_CTRL_pressed(EncoderButton& eb) 
 {
+   if (bSleep) 
+   {
+      // copy in sleep mode
+      keyPress_sleep('c',false,true);
+      return;
+   }
   //Serial.println("CTRL");
   digitalWrite(RED_LED,HIGH);
+
+  if (bSpecialButton)
+  {
+    keyPress(KEY_UP_ARROW);
+    return;
+  }
+
   controlPressed =  true;
   Keyboard.press(KEY_LEFT_CTRL);
 
@@ -165,13 +232,63 @@ void on_CTRL_pressed(EncoderButton& eb)
 
 void on_CTRL_released(EncoderButton& eb) {
   
-    controlPressed = false;
+  if (bSleep) return;
+
+  controlPressed = false;
     Keyboard.release(KEY_LEFT_CTRL);
     digitalWrite(RED_LED,LOW);
 }
 
+void on_CTRL_triple(EncoderButton& eb) {
+  
+  if (bSleep) return;
+
+  bUseControlWithWheel = !bUseControlWithWheel;
+
+  digitalWrite(BLUE_LED,LOW);
+  digitalWrite(RED_LED,LOW);
+
+  if (bUseControlWithWheel)
+  {
+    delay(100);
+    digitalWrite(RED_LED,HIGH);
+    delay(100);
+    digitalWrite(RED_LED,LOW);
+    delay(100);
+    digitalWrite(RED_LED,HIGH);
+    delay(100);
+    digitalWrite(RED_LED,LOW);
+    delay(100);
+    digitalWrite(RED_LED,HIGH);
+    delay(100);
+    digitalWrite(RED_LED,LOW);  
+    delay(100);  
+  }
+  else
+  {
+    delay(100);
+    digitalWrite(BLUE_LED,HIGH);
+    delay(100);
+    digitalWrite(BLUE_LED,LOW);
+    delay(100);
+    digitalWrite(BLUE_LED,HIGH);
+    delay(100);
+    digitalWrite(BLUE_LED,LOW);
+    delay(100);
+    digitalWrite(BLUE_LED,HIGH);
+    delay(100);
+    digitalWrite(BLUE_LED,LOW);    
+    delay(100);
+
+  }
+
+   digitalWrite(BLUE_LED,HIGH);
+} 
+
 void on_spacebar_pressed(EncoderButton& eb)
 {
+  if (bSleep) return;
+
   if(controlPressed)
   {
     Keyboard.release(KEY_LEFT_CTRL);
@@ -194,6 +311,7 @@ void on_spacebar_pressed(EncoderButton& eb)
 
 void on_spacebar_longpressed(EncoderButton& eb)
 {
+
 }
 
 
@@ -201,22 +319,26 @@ void on_spacebar_longpressed(EncoderButton& eb)
 
 void on_in_pressed(EncoderButton& eb)
 {
+  if (bSleep) return;
    keyPress('i');
 }
 
 void on_in_longpressed(EncoderButton& eb)
 {
+  if (bSleep) return;
   bSpecialLED = true;
   keyPress('i',true);
 }
 
 void on_out_pressed(EncoderButton& eb)
 {
-   keyPress('o');
+  if (bSleep) return;
+  keyPress('o');
 }
 
 void on_out_longpressed(EncoderButton& eb)
 {
+  if (bSleep) return;
   bSpecialLED = true;
    keyPress('o',true);
 }
@@ -225,11 +347,14 @@ void on_out_longpressed(EncoderButton& eb)
 
 void on_undo(EncoderButton& eb)
 {
+  if (bSleep) return;
    keyPress('z',false,true);
 }
 
 void on_redo_long(EncoderButton& eb)
 {
+  if (bSleep) return;
+
   bSpecialLED = true;
   keyPress('z',false,true,true);
   blinkRed();
@@ -239,28 +364,88 @@ void on_redo_long(EncoderButton& eb)
 
 void on_delete(EncoderButton& eb)
 {
+   if (bSleep) return;
    keyPress(KEY_DELETE);
 }
 
 void on_backspace(EncoderButton& eb)
 {
+  if (bSleep) return;
    keyPress(KEY_BACKSPACE);
 }
 
-// select all and cut
-void on_selectAll(EncoderButton& eb)
+void do_sleep()
 {
-   keyPress('a',false,true);
-   keyPress('b',false,true);
-   keyPress('a',false,true,true);
+    bSleep = true;
+      
+    digitalWrite(BLUE_LED,LOW);
+    digitalWrite(RED_LED,HIGH);
+    Keyboard.releaseAll();
+    controlPressed = false;
+    altPressed = false;
+    bMovingFast = false;
+    bSpecialButton = false;    
 }
+
+// special
+void on_specialButton(EncoderButton& eb)
+{
+  if (bSleep)
+  {
+    bSleep = false;
+    digitalWrite(BLUE_LED,HIGH);
+    digitalWrite(RED_LED,LOW);
+    controlPressed = false;
+    altPressed = false;    
+    bMovingFast = false;
+    bSpecialButton = false;
+    return;
+  }
+
+  digitalWrite(RED_LED,HIGH);
+  bSpecialButton = true;
+
+
+}
+
+void on_specialButtonRelease(EncoderButton& eb)
+{
+  if (bSleep)
+    digitalWrite(RED_LED,HIGH);
+  else 
+    digitalWrite(RED_LED,LOW);
+
+  bSpecialButton = false;
+}
+
+void on_sleep(EncoderButton& eb)
+{
+   do_sleep();
+}
+
 void on_cut(EncoderButton& eb)
 {
-   keyPress('b',false,true);
+   if (bSleep) return;
+
+  if (bSpecialButton)
+  {
+    keyPress('a',false,true);
+  }
+
+  keyPress('b',false,true);
+  
+  if (bSpecialButton)
+  {
+    keyPress('a',false,true,true);
+  }
 }
 
 void onEncoder(EncoderButton& eb) {
   
+  if (bSleep)
+  {
+    return;
+  }
   int enc = -eb.increment();
   bool fast = false;
 
@@ -276,6 +461,22 @@ void onEncoder(EncoderButton& eb) {
         keyPress(KEY_RIGHT_ARROW);
     
     Keyboard.press(KEY_LEFT_CTRL);
+    return;
+  }
+
+  if(bSpecialButton)
+  {
+    if (enc>0)
+    {
+      bSpecialLED = true;
+      keyPress(KEY_UP_ARROW);
+    }
+    if (enc<0)
+    {
+      bSpecialLED = true;
+      keyPress(KEY_DOWN_ARROW);
+    }
+
     return;
   }
 
@@ -343,35 +544,40 @@ void setup() {
   digitalWrite(RED_LED,LOW);
 
   encoderBTN.setEncoderHandler(onEncoder);  
-  
-  // ALT KEY
-  BTN_4.setPressedHandler(on_ALT_pressed);
-  BTN_4.setReleasedHandler(on_ALT_released);
 
   //CONTROL 
-  BTN_7.setPressedHandler(on_CTRL_pressed);
-  BTN_7.setReleasedHandler(on_CTRL_released);
- 
+  BTN_16.setPressedHandler(on_CTRL_pressed);
+  BTN_16.setReleasedHandler(on_CTRL_released);
+  BTN_16.setTripleClickHandler(on_CTRL_triple);
+
+  // ALT KEY
+  BTN_10.setPressedHandler(on_ALT_pressed);
+  BTN_10.setReleasedHandler(on_ALT_released);
+  //BTN_4.setTripleClickHandler(on_ALT_triple);
+
   // spacebar
   BTN_15.setPressedHandler(on_spacebar_pressed);
   //BTN_15.setLongPressHandler(on_spacebar_longpressed);
 
-  BTN_6.setPressedHandler(on_in_pressed);
-  BTN_6.setLongPressHandler(on_in_longpressed);
-  BTN_5.setPressedHandler(on_out_pressed);
-  BTN_5.setLongPressHandler(on_out_longpressed);
+  BTN_7.setPressedHandler(on_in_pressed);
+  BTN_7.setLongPressHandler(on_in_longpressed);
+  BTN_4.setPressedHandler(on_out_pressed);
+  BTN_4.setLongPressHandler(on_out_longpressed);
 
 // undo redo
   //BTN_8.setPressedHandler(on_undo_press);
   BTN_8.setClickHandler(on_undo);
   BTN_8.setLongPressHandler(on_redo_long);
 
-// delete and backspace
-  BTN_16.setPressedHandler(on_delete);
-  BTN_10.setPressedHandler(on_backspace);
+// delete and backspace (16, 10 or 7,4)
+  BTN_6.setPressedHandler(on_delete);
+  BTN_5.setPressedHandler(on_backspace);
 
-// select all
-  BTN_9.setPressedHandler(on_selectAll);
+// special button
+  BTN_9.setPressedHandler(on_specialButton);
+  BTN_9.setReleasedHandler(on_specialButtonRelease);
+  BTN_9.setTripleClickHandler(on_sleep);
+  //BTN_9.setLongPressHandler(on_sleep);
 
 //cut
   BTN_14.setPressedHandler(on_cut);
@@ -385,7 +591,7 @@ void setup() {
 
 void loop() { 
  
- if (bMovingFast && altPressed==false && controlPressed==false)
+ if (bMovingFast && altPressed==false && controlPressed==false && bSpecialButton==false)
     digitalWrite(RED_LED,LOW);
 
   encoderBTN.update();
