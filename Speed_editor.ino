@@ -95,7 +95,7 @@ void blinkBlue()
 
 void keyPress(uint8_t c, bool bAlt=false, bool bControl=false, bool bShift=false)
 {
-  Serial.println("key");
+  //Serial.println("key");
   if (bAlt)
     Keyboard.press(KEY_LEFT_ALT);
 
@@ -156,7 +156,7 @@ void on_ALT_released(EncoderButton& eb) {
 // CTRL
 void on_CTRL_pressed(EncoderButton& eb) 
 {
-  Serial.println("CTRL");
+  //Serial.println("CTRL");
   digitalWrite(RED_LED,HIGH);
   controlPressed =  true;
   Keyboard.press(KEY_LEFT_CTRL);
@@ -325,14 +325,22 @@ void onEncoder(EncoderButton& eb) {
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
-  delay(500);
-  Serial.println("EncoderButton Basic Example");
+  //Serial.begin(9600);
+  delay(100);
+  //Serial.println("EncoderButton Basic Example");
 
   pinMode(BLUE_LED,OUTPUT);
   pinMode(RED_LED,OUTPUT);
   digitalWrite(RED_LED,LOW);
   digitalWrite(BLUE_LED,LOW);
+  delay(50);
+  digitalWrite(RED_LED,HIGH);
+  delay(50);
+  digitalWrite(RED_LED,LOW);
+  delay(50);
+  digitalWrite(RED_LED,HIGH);
+  delay(50);
+  digitalWrite(RED_LED,LOW);
 
   encoderBTN.setEncoderHandler(onEncoder);  
   
