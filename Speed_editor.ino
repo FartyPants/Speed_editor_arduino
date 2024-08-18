@@ -1,6 +1,8 @@
 #include <EncoderButton.h>
 #include "Mouse.h"
 #include "Keyboard.h"
+//#include "LowPower.h"
+#include <avr/power.h>
 
 // ports: 4,5,6,7,8,9,10,16,14,15
 // LED: 18 - red
@@ -188,6 +190,7 @@ void on_ALT_pressed(EncoderButton& eb)
   {
     // paste in sleep mode
     keyPress_sleep('v',false,true);
+    digitalWrite(RED_LED,HIGH);
     return;
   }
 
@@ -226,6 +229,7 @@ void on_CTRL_pressed(EncoderButton& eb)
    {
       // copy in sleep mode
       keyPress_sleep('c',false,true);
+      digitalWrite(RED_LED,HIGH);
       return;
    }
   //Serial.println("CTRL");
@@ -471,12 +475,16 @@ void on_cut(EncoderButton& eb)
   }
 }
 
-void encoder_button_down(EncoderButton& eb) {
+void encoder_button_down(EncoderButton& eb) 
+{
+
+   if (bSleep) return;
 
   jog_mode = jog_mode+1;
   if (jog_mode>1)
     jog_mode = 0;
 
+  
   if (jog_mode==0)
     blinkBlue();
   else
@@ -633,6 +641,10 @@ void setup() {
   delay(100);
   //Serial.println("EncoderButton Basic Example");
 
+  // disable analogue 
+	ADCSRA &= ~(1 << ADEN);
+	power_adc_disable();
+
   pinMode(BLUE_LED,OUTPUT);
   pinMode(RED_LED,OUTPUT);
 
@@ -697,6 +709,64 @@ void setup() {
   digitalWrite(BLUE_LED,HIGH);
 }
 
+bool brightnessMask[4];
+
+void led(int brightness)
+{
+  // ensure 4-bit limited brightness
+  brightness = constrain(brightness, 0, 15);
+  
+  // turn 4-bit brightness into brightness mask
+  for (int i = 3; i >= 0; i--) {
+    if (brightness - (1 << i) >= 0) {
+      brightness -= (1 << i);
+      brightnessMask[i] = 1;
+    }
+    else{
+      brightnessMask[i] = 0;
+    }
+  }
+}
+
+/*
+byte _bitMask = 0;
+byte _ledBrightness = 8;
+byte _increaseBrightness = true;
+unsigned long _currentMillis, _lastUpdateMillis;
+
+void updateLeds() {
+  // if _bitMask = 0001 and _ledBrightness = 1010 (the number 10)
+  // bitwise and = (0001 & 1010) = (0000) > 0 = false             
+  bool isEnabled = (_bitMask & _ledBrightness) > 0;
+  digitalWrite(RED_LED, isEnabled);
+}
+
+void bitAngleModulationHandler() {
+  _bitMask++;
+  if (_bitMask > B1111) _bitMask = B0001; // Ensure mask goes from 1 to 15
+  
+                                                // if led brightness = 10 (binary B1010)
+  if      (_bitMask == B0001) { updateLeds(); } // cycle  1 led off
+  else if (_bitMask == B0010) { updateLeds(); } // cycle  2 led on
+                    // B0011                       cycle  3 led unchanged, still on
+  else if (_bitMask == B0100) { updateLeds(); } // cycle  4 led off
+                    // B0101                       cycle  5 led unchanged, still off
+                    // B0110                       cycle  6 led unchanged, still off
+                    // B0111                       cycle  7 led unchanged, still off
+  else if (_bitMask == B1000) { updateLeds(); } // cycle  8 led on
+                    // B1001                       cycle  9 led unchanged, still on
+                    // B1010                       cycle 10 led unchanged, still on
+                    // B1011                       cycle 11 led unchanged, still on
+                    // B1100                       cycle 12 led unchanged, still on
+                    // B1101                       cycle 13 led unchanged, still on
+                    // B1110                       cycle 14 led unchanged, still on
+                    // B1111                       cycle 15 led unchanged, still on
+                    
+                    // So out of the available 15 cycles, a brightness of 10 sets the
+                    // led to be on for 10 of them.
+}
+*/
+
 void loop() { 
  
  if (bMovingFast && altPressed==false && controlPressed==false && bSpecialButton==false)
@@ -715,4 +785,29 @@ void loop() {
   BTN_15.update();
   BTN_20.update();
   
+  if (bSleep)
+  {
+
+/*
+    // it works - PWM without PWM
+    _currentMillis = millis();
+      
+      // Once every 250 milliseconds, change the led brightness.
+      // It starts at 0 and goes up to 15, then back down to 0, and repeats.
+      if (_currentMillis - _lastUpdateMillis > 249) {
+        _lastUpdateMillis = _currentMillis;
+            
+        if      (_ledBrightness == 1)  _increaseBrightness = true;
+        else if (_ledBrightness == 15) _increaseBrightness = false;
+        
+        if (_increaseBrightness) 
+          _ledBrightness++;
+        else
+          _ledBrightness--;
+      }
+      
+      bitAngleModulationHandler();
+*/
+    //LowPower.idle(SLEEP_2S, ADC_OFF, TIMER4_OFF, TIMER3_OFF, TIMER1_OFF, TIMER0_OFF, SPI_OFF, USART1_OFF, TWI_OFF, USB_ON);
+  }
 }
