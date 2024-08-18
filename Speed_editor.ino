@@ -20,11 +20,18 @@
 #define RED_LED 18
 #define BLUE_LED 19
 
+#define ENCODER_BUTTON 20
+
 volatile bool bUseControlWithWheel = true;
 
 volatile unsigned long encoderTime = 0;
 
 volatile bool bSleep = false;
+
+volatile int32_t  encoderPosition  = 0;
+volatile int jogType = 0;
+
+volatile int jog_mode = 0;
 
 EncoderButton encoderBTN(2, 3);
 
@@ -39,6 +46,7 @@ EncoderButton BTN_16(16);
 EncoderButton BTN_14(14);
 EncoderButton BTN_15(15);
 
+EncoderButton BTN_20(ENCODER_BUTTON);
 
 volatile bool controlPressed = false;
 volatile bool altPressed = false;
@@ -72,6 +80,10 @@ void blinkRed()
   delay(30);
   digitalWrite(RED_LED,HIGH);
   delay(30);
+  digitalWrite(RED_LED,LOW);
+  delay(30);
+  digitalWrite(RED_LED,HIGH);
+  delay(30);  
   digitalWrite(RED_LED,LOW);
   digitalWrite(BLUE_LED,HIGH);
 
@@ -333,6 +345,12 @@ void on_in_longpressed(EncoderButton& eb)
 void on_out_pressed(EncoderButton& eb)
 {
   if (bSleep) return;
+  
+  if (bSpecialButton)
+  {
+    keyPress(KEY_F9);
+    return;
+  }  
   keyPress('o');
 }
 
@@ -365,13 +383,15 @@ void on_redo_long(EncoderButton& eb)
 void on_delete(EncoderButton& eb)
 {
    if (bSleep) return;
+     
    keyPress(KEY_DELETE);
 }
 
 void on_backspace(EncoderButton& eb)
 {
   if (bSleep) return;
-   keyPress(KEY_BACKSPACE);
+
+  keyPress(KEY_BACKSPACE);
 }
 
 void do_sleep()
@@ -384,7 +404,8 @@ void do_sleep()
     controlPressed = false;
     altPressed = false;
     bMovingFast = false;
-    bSpecialButton = false;    
+    bSpecialButton = false;  
+    encoderPosition = 0;  
 }
 
 // special
@@ -399,11 +420,13 @@ void on_specialButton(EncoderButton& eb)
     altPressed = false;    
     bMovingFast = false;
     bSpecialButton = false;
+    encoderPosition = 0;
     return;
   }
 
   digitalWrite(RED_LED,HIGH);
   bSpecialButton = true;
+  encoderPosition = 0;
 
 
 }
@@ -416,6 +439,14 @@ void on_specialButtonRelease(EncoderButton& eb)
     digitalWrite(RED_LED,LOW);
 
   bSpecialButton = false;
+  encoderPosition = 0;
+  if (jogType!=0)
+  {
+    keyPress('k');
+    jogType = 0;
+
+  }
+
 }
 
 void on_sleep(EncoderButton& eb)
@@ -440,6 +471,19 @@ void on_cut(EncoderButton& eb)
   }
 }
 
+void encoder_button_down(EncoderButton& eb) {
+
+  jog_mode = jog_mode+1;
+  if (jog_mode>1)
+    jog_mode = 0;
+
+  if (jog_mode==0)
+    blinkBlue();
+  else
+    blinkRed();
+      
+}
+
 void onEncoder(EncoderButton& eb) {
   
   if (bSleep)
@@ -448,6 +492,7 @@ void onEncoder(EncoderButton& eb) {
   }
   int enc = -eb.increment();
   bool fast = false;
+  encoderPosition = encoderPosition-enc;
 
   int maxshots = 0;
 
@@ -464,6 +509,63 @@ void onEncoder(EncoderButton& eb) {
     return;
   }
 
+  if (bSpecialButton || jog_mode==1)
+  {
+    int prevJog = jogType;
+
+    int nOff = 2;
+    
+    if (encoderPosition > nOff)
+    {
+      jogType+=1;
+      if (jogType>1) jogType = 1;
+      encoderPosition = 0;
+      
+    }
+    if (encoderPosition < -nOff)
+    {
+      jogType-=1;
+      if (jogType<-1) jogType = -1;
+      encoderPosition = 0;
+      
+    }
+
+    if (prevJog!=jogType)
+    {
+      if (jogType==-1)
+        {
+          keyPress('k');
+          keyPress('j');
+        }
+      if (jogType==-2)
+        {
+          keyPress('k');
+          keyPress('j');
+          keyPress('j');
+        }        
+      if (jogType==0)
+        {
+          keyPress('k');
+        }
+
+      if (jogType==1)
+        {
+          keyPress('k');
+          keyPress('l');
+        }
+      if (jogType==2)
+      {
+        keyPress('k');
+        keyPress('l'); 
+        keyPress('l');
+      }
+
+    }
+
+    return;
+
+  }
+/*
   if(bSpecialButton)
   {
     if (enc>0)
@@ -479,6 +581,7 @@ void onEncoder(EncoderButton& eb) {
 
     return;
   }
+*/
 
   if (altPressed)
   {
@@ -532,6 +635,9 @@ void setup() {
 
   pinMode(BLUE_LED,OUTPUT);
   pinMode(RED_LED,OUTPUT);
+
+  pinMode(ENCODER_BUTTON,INPUT_PULLUP);
+
   digitalWrite(RED_LED,LOW);
   digitalWrite(BLUE_LED,LOW);
   delay(50);
@@ -582,6 +688,8 @@ void setup() {
 //cut
   BTN_14.setPressedHandler(on_cut);
 
+  BTN_20.setPressedHandler(encoder_button_down);
+
 
   Mouse.begin();
   Keyboard.begin();
@@ -605,5 +713,6 @@ void loop() {
   BTN_16.update();
   BTN_14.update();
   BTN_15.update();
+  BTN_20.update();
   
 }
