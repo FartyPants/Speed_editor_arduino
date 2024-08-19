@@ -2,7 +2,7 @@
 #include "Mouse.h"
 #include "Keyboard.h"
 //#include "LowPower.h"
-#include <avr/power.h>
+//#include <avr/power.h>
 
 // ports: 4,5,6,7,8,9,10,16,14,15
 // LED: 18 - red
@@ -14,7 +14,7 @@
 // Backspace {backspce} 10
 // delete [DEL] 16
 // IN (i) 6 and OUT (o) 5
-// CTRL) 7 
+// CTRL) 7 c:\Users\Desktop\Downloads\midi_controller_Micro_Atmega32u4_DW_v2.ino
 // (ALT) 4
 
 // play (spacebar)
@@ -500,12 +500,13 @@ void onEncoder(EncoderButton& eb) {
   }
   int enc = -eb.increment();
   bool fast = false;
-  encoderPosition = encoderPosition-enc;
+  
 
   int maxshots = 0;
 
   if (controlPressed)
   {
+    
     Keyboard.release(KEY_LEFT_CTRL);
     
       if (enc>0)
@@ -519,6 +520,8 @@ void onEncoder(EncoderButton& eb) {
 
   if (bSpecialButton || jog_mode==1)
   {
+    encoderPosition = encoderPosition-enc;
+
     int prevJog = jogType;
 
     int nOff = 2;
@@ -641,10 +644,6 @@ void setup() {
   delay(100);
   //Serial.println("EncoderButton Basic Example");
 
-  // disable analogue 
-	ADCSRA &= ~(1 << ADEN);
-	power_adc_disable();
-
   pinMode(BLUE_LED,OUTPUT);
   pinMode(RED_LED,OUTPUT);
 
@@ -708,7 +707,7 @@ void setup() {
 
   digitalWrite(BLUE_LED,HIGH);
 }
-
+/*
 bool brightnessMask[4];
 
 void led(int brightness)
@@ -727,7 +726,7 @@ void led(int brightness)
     }
   }
 }
-
+*/
 /*
 byte _bitMask = 0;
 byte _ledBrightness = 8;
@@ -784,11 +783,13 @@ void loop() {
   BTN_14.update();
   BTN_15.update();
   BTN_20.update();
-  
+
+/*  
+  // pulsating light without PWM
   if (bSleep)
   {
 
-/*
+
     // it works - PWM without PWM
     _currentMillis = millis();
       
@@ -807,7 +808,8 @@ void loop() {
       }
       
       bitAngleModulationHandler();
-*/
-    //LowPower.idle(SLEEP_2S, ADC_OFF, TIMER4_OFF, TIMER3_OFF, TIMER1_OFF, TIMER0_OFF, SPI_OFF, USART1_OFF, TWI_OFF, USB_ON);
+
+    LowPower.idle(SLEEP_2S, ADC_OFF, TIMER4_OFF, TIMER3_OFF, TIMER1_OFF, TIMER0_OFF, SPI_OFF, USART1_OFF, TWI_OFF, USB_ON);
   }
+  */
 }
