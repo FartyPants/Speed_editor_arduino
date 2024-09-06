@@ -31,7 +31,7 @@ volatile unsigned long encoderTime = 0;
 volatile bool bSleep = false;
 
 volatile int32_t  encoderPosition  = 0;
-volatile int jogType = 0;
+volatile int current_jog_pos = 0;
 
 volatile int jog_mode = 0;
 
@@ -216,6 +216,25 @@ void on_ALT_released(EncoderButton& eb) {
   digitalWrite(RED_LED,LOW);
 }
 
+void on_ALT_double(EncoderButton& eb) {
+  
+  if (bSleep) return;
+
+  keyPress_sleep('v',false,true);
+  delay(50);
+  digitalWrite(RED_LED,HIGH);
+  delay(0);
+  digitalWrite(RED_LED,LOW);
+  delay(50);
+  digitalWrite(RED_LED,HIGH);
+  delay(50);
+  digitalWrite(RED_LED,LOW);
+  delay(50);
+  digitalWrite(RED_LED,HIGH);
+  delay(50);
+  digitalWrite(RED_LED,LOW);
+}
+
 void on_ALT_triple(EncoderButton& eb) 
 {
   
@@ -253,6 +272,22 @@ void on_CTRL_released(EncoderButton& eb) {
   controlPressed = false;
     Keyboard.release(KEY_LEFT_CTRL);
     digitalWrite(RED_LED,LOW);
+}
+
+void on_CTRL_double(EncoderButton& eb) {
+  
+  if (bSleep) return;
+
+  keyPress_sleep('c',false,true);
+  delay(50);
+  digitalWrite(RED_LED,HIGH);
+  delay(0);
+  digitalWrite(RED_LED,LOW);
+  delay(50);
+  digitalWrite(RED_LED,HIGH);
+  delay(50);
+  digitalWrite(RED_LED,LOW);
+
 }
 
 void on_CTRL_triple(EncoderButton& eb) {
@@ -305,25 +340,43 @@ void on_spacebar_pressed(EncoderButton& eb)
 {
   if (bSleep) return;
 
+  if (bSpecialButton)
+  {
+
+    keyPress(KEY_HOME);
+
+  }
   if(controlPressed)
   {
     Keyboard.release(KEY_LEFT_CTRL);
     bSpecialLED = true;
-    keyPress(KEY_UP_ARROW);
+    keyPress(KEY_HOME);
     Keyboard.press(KEY_LEFT_CTRL);
   }
   else if(altPressed)
     {
       Keyboard.release(KEY_LEFT_ALT);
       bSpecialLED = true; 
-      keyPress(KEY_DOWN_ARROW);
+      keyPress(KEY_END);
       Keyboard.press(KEY_LEFT_ALT);
     }
-  else  
+  else
    keyPress(' ');
 
 }
 
+
+void on_spacebar_double(EncoderButton& eb)
+{
+  if (bSleep) return;
+
+  if (bSpecialButton)
+  {
+
+    keyPress(KEY_END);
+
+  }
+}
 
 void on_spacebar_longpressed(EncoderButton& eb)
 {
@@ -431,8 +484,14 @@ void on_specialButton(EncoderButton& eb)
   digitalWrite(RED_LED,HIGH);
   bSpecialButton = true;
   encoderPosition = 0;
-
-
+  /*
+  if (current_jog_pos!=0)
+  {
+    keyPress('k');
+    current_jog_pos = 0;
+  
+  }
+*/
 }
 
 void on_specialButtonRelease(EncoderButton& eb)
@@ -444,11 +503,11 @@ void on_specialButtonRelease(EncoderButton& eb)
 
   bSpecialButton = false;
   encoderPosition = 0;
-  if (jogType!=0)
+  if (current_jog_pos!=0)
   {
     keyPress('k');
-    jogType = 0;
-
+    current_jog_pos = 0;
+  
   }
 
 }
@@ -504,7 +563,7 @@ void onEncoder(EncoderButton& eb) {
 
   int maxshots = 0;
 
-  if (controlPressed)
+  if (controlPressed || jog_mode==1)
   {
     
     Keyboard.release(KEY_LEFT_CTRL);
@@ -514,61 +573,88 @@ void onEncoder(EncoderButton& eb) {
       if (enc<0)
         keyPress(KEY_RIGHT_ARROW);
     
-    Keyboard.press(KEY_LEFT_CTRL);
+    // press it back
+    if (controlPressed)
+      Keyboard.press(KEY_LEFT_CTRL);
+
     return;
   }
 
-  if (bSpecialButton || jog_mode==1)
+  if (bSpecialButton) // || jog_mode==1)
   {
     encoderPosition = encoderPosition-enc;
 
-    int prevJog = jogType;
+    int prevJog = current_jog_pos;
 
-    int nOff = 2;
+    int nOff = 3;
     
     if (encoderPosition > nOff)
     {
-      jogType+=1;
-      if (jogType>1) jogType = 1;
+      current_jog_pos+=1;
+      if (current_jog_pos>3) current_jog_pos = 3;
       encoderPosition = 0;
       
     }
     if (encoderPosition < -nOff)
     {
-      jogType-=1;
-      if (jogType<-1) jogType = -1;
+      current_jog_pos-=1;
+      if (current_jog_pos<-3) current_jog_pos = -3;
       encoderPosition = 0;
       
     }
 
-    if (prevJog!=jogType)
+    if (prevJog!=current_jog_pos)
     {
-      if (jogType==-1)
+      if (current_jog_pos==-1)
         {
           keyPress('k');
           keyPress('j');
         }
-      if (jogType==-2)
+        else
+      if (current_jog_pos==-2)
         {
           keyPress('k');
           keyPress('j');
           keyPress('j');
-        }        
-      if (jogType==0)
-        {
-          keyPress('k');
         }
+        else
+        if (current_jog_pos==-3)
+        {
+          keyPress('k');
+          keyPress('j');
+          keyPress('j');
+          keyPress('j');
+          keyPress('j');
+          //keyPress('j');
 
-      if (jogType==1)
+        }
+        else               
+      if (current_jog_pos==0)
+        {
+          keyPress('k');
+        }
+        else
+      if (current_jog_pos==1)
         {
           keyPress('k');
           keyPress('l');
         }
-      if (jogType==2)
+        else
+      if (current_jog_pos==2)
       {
         keyPress('k');
         keyPress('l'); 
         keyPress('l');
+      }
+      else
+      if (current_jog_pos==3)
+      {
+        keyPress('k');
+        keyPress('l'); 
+        keyPress('l');
+        keyPress('l');
+        keyPress('l');
+        //keyPress('l');
       }
 
     }
@@ -666,14 +752,17 @@ void setup() {
   BTN_16.setPressedHandler(on_CTRL_pressed);
   BTN_16.setReleasedHandler(on_CTRL_released);
   BTN_16.setTripleClickHandler(on_CTRL_triple);
+  BTN_16.setDoubleClickHandler(on_CTRL_double);
 
   // ALT KEY
   BTN_10.setPressedHandler(on_ALT_pressed);
   BTN_10.setReleasedHandler(on_ALT_released);
+  BTN_10.setDoubleClickHandler(on_ALT_double);
   //BTN_4.setTripleClickHandler(on_ALT_triple);
 
   // spacebar
   BTN_15.setPressedHandler(on_spacebar_pressed);
+  BTN_15.setDoubleClickHandler(on_spacebar_double);
   //BTN_15.setLongPressHandler(on_spacebar_longpressed);
 
   BTN_7.setPressedHandler(on_in_pressed);
@@ -687,8 +776,8 @@ void setup() {
   BTN_8.setLongPressHandler(on_redo_long);
 
 // delete and backspace (16, 10 or 7,4)
-  BTN_6.setPressedHandler(on_delete);
-  BTN_5.setPressedHandler(on_backspace);
+  BTN_5.setPressedHandler(on_delete);
+  BTN_6.setPressedHandler(on_backspace);
 
 // special button
   BTN_9.setPressedHandler(on_specialButton);
@@ -699,6 +788,7 @@ void setup() {
 //cut
   BTN_14.setPressedHandler(on_cut);
 
+// encoder
   BTN_20.setPressedHandler(encoder_button_down);
 
 
